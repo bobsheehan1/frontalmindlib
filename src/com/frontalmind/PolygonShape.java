@@ -31,6 +31,7 @@ public class PolygonShape extends Shape{
 		xarray = new float[sides];
 		yarray = new float[sides];
 		calcArrays();
+		calcPath();
 	}
 	
 	//onreseize for shapedrawable wrapper will set cx, cy, r
@@ -42,6 +43,16 @@ public class PolygonShape extends Shape{
 		xarray = new float[sides];
 		yarray = new float[sides];
 		calcArrays();
+		calcPath();
+	}
+
+	private void calcPath() {
+		wallpath.reset(); // only needed when reusing this path for a new build
+		wallpath.moveTo(this.xarray[0], this.yarray[0]); // used for first point
+		for (int i = 1; i < this.sides; ++i)
+			wallpath.lineTo(this.xarray[i], this.yarray[i]);
+		wallpath.lineTo(this.xarray[0], this.yarray[0]); // there is a setLastPoint action but i found it not to work as expected
+		wallpath.close();
 	}
 
 	private void calcArrays() {
@@ -224,13 +235,6 @@ public class PolygonShape extends Shape{
 
 	@Override
 	public void draw(Canvas canvas, Paint paint) {
-	      wallpath.reset(); // only needed when reusing this path for a new build
-	      wallpath.moveTo(this.xarray[0], this.yarray[0]); // used for first point
-	      for (int i = 1; i < this.sides; ++i)
-	    	  wallpath.lineTo(this.xarray[i], this.yarray[i]);
-	      wallpath.lineTo(this.xarray[0], this.yarray[0]); // there is a setLastPoint action but i found it not to work as expected
-	      wallpath.lineTo(this.xarray[1], this.yarray[1]); // once more to complete stroke (android bug ?)
-	      
 	      canvas.drawPath(wallpath, paint);	
 	}
 	
@@ -241,5 +245,6 @@ public class PolygonShape extends Shape{
 		cy = height/2;
 		r = width/2;
 		calcArrays();
+		calcPath();
 	}
 }
