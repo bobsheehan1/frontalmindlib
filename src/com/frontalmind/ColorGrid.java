@@ -4,47 +4,56 @@ import java.util.Vector;
 
 import android.graphics.Canvas;
 import android.graphics.Rect;
-import android.graphics.drawable.ShapeDrawable;
 import android.util.Log;
+
+import com.frontalmind.shape.ShapeFactory;
+import com.frontalmind.shape.StarShape;
+import com.frontalmind.shape.StrokeAndFillDrawable;
+import com.frontalmind.shape.behavior.AlphaBehavior;
+import com.frontalmind.shape.behavior.RotateBehavior;
 
 public class ColorGrid {
 	private int incrX, incrY, viewWidth, viewHeight, blockSize, 
 	numX, numY, offsetX, offsetY, padding, strokeWidth;
-	private Vector<StrokeAndFillDrawable> shapes;
+	private Vector<StrokeAndFillDrawable> drawables;
 	private String shapeStr;
 	
 	public int fillAlpha;
 	public int strokeAlpha;
 	public String borderColorRange;
 	public String colorRange;
-	public int decay, threshold;
+	public int alphaDecay, threshold;
 
 	
 	public ColorGrid() {
 		padding = 2;
 		shapeStr = "random";
-		shapes = new Vector<StrokeAndFillDrawable>();
+		drawables = new Vector<StrokeAndFillDrawable>();
 
 		setBlockSize(50);
 		setStrokeWidth(2);
 	}
 
-	public void updateColors() {
-		for (StrokeAndFillDrawable drawable : shapes) {
-
-			// fill
-			if (drawable.updateColor(true)) {
-				if (shapeStr.equals("random")){
-					drawable.setShape(ShapeFactory.generateRandomShape());
-					drawable.updateColor(true);
-				}
-			}
-
-			if (drawable.isEnableStroke() && drawable.updateColor(false)) {
-			}
-		}
-
-	}
+//	public void updateColors() {
+//		for (StrokeAndFillDrawable drawable : drawables) {
+////			int alpha = drawable.getPaint().getAlpha();
+////			alpha -= 5;
+////			if (alpha < 0)
+////				alpha = 0;
+////			drawable.getPaint().setAlpha(alpha);
+////			// fill
+//			if (drawable.updateColor(true)) {
+//				if (shapeStr.equals("random")){
+//					//ShapeFactory.
+//					//drawable.setShape(ShapeFactory.generateRandomShape());
+//					//drawable.updateColor(true);
+//				}
+//			}
+//
+//			if (drawable.isEnableStroke() && drawable.updateColor(false)) {
+//			}
+//		}
+//	}
 	
 	public void createGrid(int w, int h) {
 		if (shapeStr.equals("hexagon")){
@@ -54,7 +63,7 @@ public class ColorGrid {
 		
 		if (w <= 0 || h <= 0)
 			return;
-		shapes.clear();
+		drawables.clear();
 		this.viewWidth = w;
 		this.viewHeight = h;
 		int totalCellWidth = blockSize + padding * 2;
@@ -90,14 +99,14 @@ public class ColorGrid {
 				StrokeAndFillDrawable drawable = ShapeFactory.generateDrawable(this.shapeStr,
 						this.colorRange,
 						this.borderColorRange,
-						this.fillAlpha,
-						this.strokeAlpha,
-						this.strokeWidth,
-						this.threshold,
-						this.decay);
+						this.strokeWidth);
 
+				drawable.addBehavior(new AlphaBehavior(this.alphaDecay, this.fillAlpha, this.strokeAlpha, this.threshold, true, true));
+				//drawable.addBehavior(new MoveBehavior(2,2, true));
+				if (drawable.getShape() instanceof StarShape)
+					drawable.addBehavior(new RotateBehavior(5, true));
 				drawable.setBounds(bounds);
-				shapes.add(drawable);
+				drawables.add(drawable);
 			}
 		}
 	}
@@ -107,7 +116,7 @@ public class ColorGrid {
 	public void createHoneycomb(int w, int h) {
 		if (w <= 0 || h <= 0)
 			return;
-		shapes.clear();
+		drawables.clear();
 		this.viewWidth = w;
 		this.viewHeight = h;
 		int totalCellWidth = blockSize + padding * 2;
@@ -202,13 +211,12 @@ public class ColorGrid {
 				StrokeAndFillDrawable drawable = ShapeFactory.generateDrawable(this.shapeStr,
 						this.colorRange,
 						this.borderColorRange,
-						this.fillAlpha,
-						this.strokeAlpha,
-						this.strokeWidth,
-						this.threshold,
-						this.decay);		
+						this.strokeWidth);		
+				drawable.addBehavior(new AlphaBehavior(this.alphaDecay, this.fillAlpha, this.strokeAlpha, this.threshold, true, true));
+				//drawable.addBehavior(new RotateBehavior(5, true));
+
 				drawable.setBounds(bounds);
-				shapes.add(drawable);
+				drawables.add(drawable);
 			}
 		}
 	}
@@ -222,26 +230,22 @@ public class ColorGrid {
 
 	public void setColorRange(String colorRange) {
 		this.colorRange = colorRange;
-		for (StrokeAndFillDrawable shape : shapes)
+		for (StrokeAndFillDrawable shape : drawables)
 			shape.colorRange = colorRange;
 	}
 
 	public void setBorderColorRange(String colorRange) {
 		this.borderColorRange = colorRange;
-		for (StrokeAndFillDrawable shape : shapes)
+		for (StrokeAndFillDrawable shape : drawables)
 			shape.borderColorRange = colorRange;
 	}
 	
 	public void setDecayStep(int decayStep) {
-		this.decay = decayStep;
-		for (StrokeAndFillDrawable shape : shapes)
-			shape.decay = decayStep;
+		this.alphaDecay = decayStep;
 	}
 
 	public void setThreshold(int threshold) {
 		this.threshold = threshold;
-		for (StrokeAndFillDrawable shape : shapes)
-			shape.threshold = threshold;
 	}
 
 	public void setPadding(int padding) {
@@ -254,30 +258,39 @@ public class ColorGrid {
 
 	public void setStrokeWidth(int strokeWidth) {
 		this.strokeWidth = strokeWidth;
-		for (StrokeAndFillDrawable shape : shapes)
+		for (StrokeAndFillDrawable shape : drawables)
 			shape.setStrokeWidth(strokeWidth);
 	}
 	
 	public void draw(Canvas canvas) {
-		for (ShapeDrawable shape : shapes){
-			shape.getBounds();
-			//Paint p = new Paint();
-			//p.setColor(Color.BLUE);
-			//canvas.drawRect(shape.getBounds(),p);
-			shape.draw(canvas);
+		for (StrokeAndFillDrawable drawable : drawables){
+			if (drawable.rotation != 0){
+				canvas.save();
+				canvas.rotate(drawable.rotation, drawable.getBounds().exactCenterX(), drawable.getBounds().exactCenterY());
+				drawable.draw(canvas);
+				canvas.restore();
+			}
+			else
+				drawable.draw(canvas);
+				
 		}
 	}
 	
 	public void setFillAlpha(int fillAlpha) {
 		this.fillAlpha = fillAlpha;
-		for (StrokeAndFillDrawable shape : shapes)
-			shape.fillAlpha = fillAlpha;
+		for (StrokeAndFillDrawable shape : drawables)
+			shape.setFillAlpha(fillAlpha);
 	}
 	
 	public void setStrokeAlpha(int strokeAlpha) {
 		this.strokeAlpha = strokeAlpha;
-		for (StrokeAndFillDrawable shape : shapes)
-			shape.strokeAlpha = strokeAlpha;
+		for (StrokeAndFillDrawable shape : drawables)
+			shape.setStrokeAlpha(strokeAlpha);
+	}
+
+	public void animate() {
+		for (StrokeAndFillDrawable drawable : drawables)
+			drawable.animate();
 	}
 
 }

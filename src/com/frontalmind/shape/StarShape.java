@@ -1,4 +1,4 @@
-package com.frontalmind;
+package com.frontalmind.shape;
 
 import java.util.Random;
 
@@ -9,28 +9,33 @@ import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.drawable.shapes.Shape;
 
-public class StarShape extends Shape {
+public class StarShape extends Shape implements IBehaveShape {
 
     private Path path = new Path();
     private int arms;
     private double innerRadius, outerRadius;
-	static private Random random = new Random();
+	Point center = new Point(5,5);
+	Paint circlePaint = new Paint();
+	Paint starPaint;
+
 
 	@Override
 	public void draw(Canvas canvas, Paint paint) {
-	      canvas.drawPath(path, paint);	
+		starPaint = paint;
+		canvas.drawPath(path, paint);
 	}
 	
 	@Override
 	public void onResize(float width, float height){
 		super.onResize(width, height);
-		Point center = new Point();
+		center = new Point();
 		center.x = (int) (width/2);
 		center.y = (int) (height/2);
 		double rOuter = width/2; 
 		double radiusRatio = this.innerRadius/this.outerRadius;
-		double rInner = rOuter *radiusRatio;
-		calcPath(center, rOuter, rInner);
+		this.innerRadius = rOuter *radiusRatio;
+		this.outerRadius = rOuter;
+		calcPath(center, this.outerRadius, this.innerRadius);
 	}
 	
 	public StarShape(int arms, Point center, double rOuter, double rInner)
@@ -59,10 +64,10 @@ public class StarShape extends Shape {
 	    path.close();
 	}
 
-	public static Shape generateRandomStar() {
-		int n = 7 + random.nextInt(20);
-		int innerRadius = 8 - random.nextInt(4);
-		return new StarShape(n, new Point (5,5), 10, innerRadius);
-	}
 
+	@Override
+	public void updateBirth() {
+		// TODO Auto-generated method stub
+		
+	}
 }

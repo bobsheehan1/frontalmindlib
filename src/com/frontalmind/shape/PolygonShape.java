@@ -1,4 +1,4 @@
-package com.frontalmind;
+package com.frontalmind.shape;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
