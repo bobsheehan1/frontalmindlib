@@ -2,10 +2,9 @@ package com.frontalmind.shape;
 
 import java.util.Random;
 
+import com.frontalmind.StrokeAndFillDrawable;
+
 import android.graphics.Point;
-import android.graphics.RadialGradient;
-import android.graphics.Shader;
-import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.OvalShape;
 import android.graphics.drawable.shapes.RectShape;
 import android.graphics.drawable.shapes.RoundRectShape;
@@ -22,29 +21,30 @@ public class ShapeFactory
 
 	}
 
-	public static StrokeAndFillDrawable generateDrawable(String shapeStr, 
-			String colorRange, 
-			String borderColorRange,
-			int strokeWidth
-			) 
+	public static StrokeAndFillDrawable initializeDrawable(StrokeAndFillDrawable drawable, String shapeStr, String colorRange, String borderColorRange, int strokeWidth) 
 	{
-		
-		StrokeAndFillDrawable drawable = new StrokeAndFillDrawable();
-		drawable.colorRange = colorRange;
+		//drawable.setShaderFactory(null);
+
 		drawable.borderColorRange = borderColorRange;
 		drawable.setStrokeWidth(strokeWidth);
+		drawable.colorRange = colorRange;
 		drawable.setFillColor(drawable.generateColor(true, 0));
 		drawable.setStrokeColor(drawable.generateColor(false, 0));
+		drawable.setFillAlpha(0);
 		drawable.setStrokeAlpha(0);
-		generateDrawable(shapeStr, drawable);
+		initializeShape(shapeStr, drawable);
 		
-
+		drawable.setEnable(true);
+		
 		return drawable;
 	}
 	
-	public static StrokeAndFillDrawable generateDrawable(String shapeStr, final StrokeAndFillDrawable drawable) 
+	public static StrokeAndFillDrawable initializeShape(String shapeStr, final StrokeAndFillDrawable drawable) 
 	{
-		if (shapeStr.equals("circle")) {
+		if (shapeStr.equals("heart")) {
+			drawable.setShape(new HeartShape(0,0,10,10));
+			drawable.updateShader();		
+		}else if (shapeStr.equals("circle")) {
 			drawable.setShape(new OvalShape());
 		} else if (shapeStr.equals("rect")) {
 			drawable.setShape(new RectShape());
@@ -59,47 +59,30 @@ public class ShapeFactory
 			final int innerRadius = 8 - random.nextInt(6);
 			final int outerRadius = 10;
 			Shape star = new StarShape(n, new Point (5,5), outerRadius, innerRadius);
-			drawable.setShape(star);
-			drawable.centerColor = drawable.generateColor(true, 255);
-			drawable.edgeColor = drawable.generateColor(true, 255);
-			
-			ShapeDrawable.ShaderFactory sf = new ShapeDrawable.ShaderFactory() {
-			    @Override
-			    public Shader resize(int width, int height) {
-					Point center = new Point();
-					center.x = (int) (width/2);
-					center.y = (int) (height/2);
-					float rOuter = width/2; 
-					float radiusRatio = (float)innerRadius/(float)outerRadius;
-					drawable.radialRadius = (rOuter *radiusRatio);
-					drawable.radialGradient = new RadialGradient(
-							center.x, center.y, drawable.radialRadius,
-							drawable.centerColor, drawable.edgeColor,
-						    Shader.TileMode.CLAMP);
-					return drawable.radialGradient;
-			    }
-			};
-			
-			drawable.setShaderFactory(sf);
-			
+			drawable.setShape(star);		
+			drawable.updateShader();		
 		} else if (shapeStr.equals("random")) {
-			switch (random.nextInt(5)) {
+			switch (random.nextInt(6)) {
 			case 0:
-				return generateDrawable("circle", drawable);
+				return initializeShape("circle", drawable);
 			case 1:
-				return generateDrawable("rect", drawable);
+				return initializeShape("rect", drawable);
 			case 2:
-				return generateDrawable("round_rect", drawable);
+				return initializeShape("round_rect", drawable);
 			case 3:
-				return generateDrawable("star", drawable);
+				return initializeShape("star", drawable);
 			case 4:
-				return generateDrawable("hexagon", drawable);
+				return initializeShape("hexagon", drawable);
+			case 5:
+				return initializeShape("heart", drawable);
 			}
 		}
 
 
 		return drawable;
 	}
+
+
 
 
 	public static void setCornerRadius(float cornerRadius) {

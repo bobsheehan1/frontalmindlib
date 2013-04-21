@@ -1,6 +1,6 @@
 package com.frontalmind.shape.behavior;
 
-import com.frontalmind.shape.StrokeAndFillDrawable;
+import com.frontalmind.StrokeAndFillDrawable;
 
 public interface IBehavior {
 

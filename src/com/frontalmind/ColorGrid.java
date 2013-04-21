@@ -1,16 +1,20 @@
 package com.frontalmind;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.Vector;
 
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.util.Log;
 
+import com.frontalmind.shape.HeartShape;
 import com.frontalmind.shape.ShapeFactory;
 import com.frontalmind.shape.StarShape;
-import com.frontalmind.shape.StrokeAndFillDrawable;
 import com.frontalmind.shape.behavior.AlphaBehavior;
 import com.frontalmind.shape.behavior.RotateBehavior;
+import com.frontalmind.shape.behavior.ScaleBehavior;
 
 public class ColorGrid {
 	private int incrX, incrY, viewWidth, viewHeight, blockSize, 
@@ -24,6 +28,7 @@ public class ColorGrid {
 	public String colorRange;
 	public int alphaDecay, threshold;
 
+	public int minAliveSize = 20;
 	
 	public ColorGrid() {
 		padding = 2;
@@ -33,27 +38,6 @@ public class ColorGrid {
 		setBlockSize(50);
 		setStrokeWidth(2);
 	}
-
-//	public void updateColors() {
-//		for (StrokeAndFillDrawable drawable : drawables) {
-////			int alpha = drawable.getPaint().getAlpha();
-////			alpha -= 5;
-////			if (alpha < 0)
-////				alpha = 0;
-////			drawable.getPaint().setAlpha(alpha);
-////			// fill
-//			if (drawable.updateColor(true)) {
-//				if (shapeStr.equals("random")){
-//					//ShapeFactory.
-//					//drawable.setShape(ShapeFactory.generateRandomShape());
-//					//drawable.updateColor(true);
-//				}
-//			}
-//
-//			if (drawable.isEnableStroke() && drawable.updateColor(false)) {
-//			}
-//		}
-//	}
 	
 	public void createGrid(int w, int h) {
 		if (shapeStr.equals("hexagon")){
@@ -82,7 +66,6 @@ public class ColorGrid {
 		this.offsetX = padding + strokeWidth/2 + (viewWidth-rowCoverageX)/2;
 		this.offsetY = padding + strokeWidth/2 + (viewHeight-graphicHeight)/2;
 
-
 		Rect bounds = new Rect();
 		
 		for (int i = 0; i < numX; ++i) {
@@ -90,21 +73,12 @@ public class ColorGrid {
 				int posX, posY;
 				posX = i*incrX + offsetX;
 				posY = j*incrY + offsetY;
-				
 				bounds.left = posX;
 				bounds.right = posX + blockSize;
 				bounds.top = posY;
 				bounds.bottom = posY + blockSize;
 				
-				StrokeAndFillDrawable drawable = ShapeFactory.generateDrawable(this.shapeStr,
-						this.colorRange,
-						this.borderColorRange,
-						this.strokeWidth);
-
-				drawable.addBehavior(new AlphaBehavior(this.alphaDecay, this.fillAlpha, this.strokeAlpha, this.threshold, true, true));
-				//drawable.addBehavior(new MoveBehavior(2,2, true));
-				if (drawable.getShape() instanceof StarShape)
-					drawable.addBehavior(new RotateBehavior(5, true));
+				StrokeAndFillDrawable drawable = new StrokeAndFillDrawable();
 				drawable.setBounds(bounds);
 				drawables.add(drawable);
 			}
@@ -186,13 +160,14 @@ public class ColorGrid {
 
 		Rect bounds = new Rect();
 		
+		this.numY = evenColNumY+oddColNumY;
 		// this draws 2 columns for each j offset by incrY
 		for (int i = 0; i < numX; ++i) {
 			boolean bail = false;
 			if ((evenColNumX < oddColNumX) && (i == numX-1))
 				bail = true;
 
-			for (int j = 0; j < evenColNumY+oddColNumY; ++j) {
+			for (int j = 0; j < this.numY; ++j) {
 				int posX, posY;
 				if (j%2 == 0 && !bail){
 					posX = i*incrX + offsetX + this.incrX/2;
@@ -208,12 +183,10 @@ public class ColorGrid {
 				bounds.right = posX + blockSize;
 				bounds.top = posY;
 				bounds.bottom = posY + blockSize;
-				StrokeAndFillDrawable drawable = ShapeFactory.generateDrawable(this.shapeStr,
-						this.colorRange,
-						this.borderColorRange,
-						this.strokeWidth);		
-				drawable.addBehavior(new AlphaBehavior(this.alphaDecay, this.fillAlpha, this.strokeAlpha, this.threshold, true, true));
-				//drawable.addBehavior(new RotateBehavior(5, true));
+				StrokeAndFillDrawable drawable = new StrokeAndFillDrawable();
+				//ShapeFactory.initializeDrawable(drawable, this.shapeStr, colorRange, borderColorRange, strokeWidth);		
+	
+				//addBehaviors(drawable);
 
 				drawable.setBounds(bounds);
 				drawables.add(drawable);
@@ -222,10 +195,22 @@ public class ColorGrid {
 	}
 
 
+	private void addBehaviors(StrokeAndFillDrawable drawable) {
+		drawable.clearBehaviors();
+		if (shapeStr.equals("hexagon")){
+			drawable.addBehavior(new AlphaBehavior(this.alphaDecay, this.fillAlpha, this.strokeAlpha, this.threshold, true, true));
+		} else {
+			drawable.addBehavior(new AlphaBehavior(this.alphaDecay, this.fillAlpha, this.strokeAlpha, this.threshold, true, true));
+			if (drawable.getShape() instanceof StarShape)
+				drawable.addBehavior(new RotateBehavior(5, true));
+			if (drawable.getShape() instanceof HeartShape)
+				drawable.addBehavior(new ScaleBehavior(.75f, 1.25f, .05f, true, true));
+		}		
+	}
+
 	public void setBlockSize(int blockSize) {
 		this.blockSize = blockSize;
 		ShapeFactory.setCornerRadius(blockSize/4);
-
 	}
 
 	public void setColorRange(String colorRange) {
@@ -264,9 +249,14 @@ public class ColorGrid {
 	
 	public void draw(Canvas canvas) {
 		for (StrokeAndFillDrawable drawable : drawables){
-			if (drawable.rotation != 0){
+			if (!drawable.getEnable())
+				continue;
+			if (drawable.rotation != 0 || drawable.scale != 1.0f){
 				canvas.save();
-				canvas.rotate(drawable.rotation, drawable.getBounds().exactCenterX(), drawable.getBounds().exactCenterY());
+				if (drawable.rotation != 0)
+					canvas.rotate(drawable.rotation, drawable.getBounds().exactCenterX(), drawable.getBounds().exactCenterY());
+				if (drawable.scale != 1.0f)
+					canvas.scale(drawable.scale, drawable.scale, drawable.getBounds().exactCenterX(), drawable.getBounds().exactCenterY());
 				drawable.draw(canvas);
 				canvas.restore();
 			}
@@ -291,6 +281,73 @@ public class ColorGrid {
 	public void animate() {
 		for (StrokeAndFillDrawable drawable : drawables)
 			drawable.animate();
+	}
+
+	public void reincarnate() {
+		synchronized (this){
+			if (drawables.size() == 0)
+				return;
+			List<StrokeAndFillDrawable> dead = new ArrayList<StrokeAndFillDrawable>();
+			for (StrokeAndFillDrawable drawable : drawables)
+				if (drawable.getShape() == null)
+					dead.add(drawable);
+
+			if (dead.size() == 0)
+				return;
+			
+			if (drawables.size() - dead.size() > minAliveSize)
+				return;
+			//randomly create
+			Random random = new Random();
+			int index = random.nextInt(dead.size());
+			StrokeAndFillDrawable reincarnated = dead.get(index);
+			reincarnated.rotation = 0;
+			reincarnated.scale = 1.0f;
+			reincarnated.resetShape();
+			reincarnated.clearBehaviors();
+
+			ShapeFactory.initializeDrawable(reincarnated, shapeStr, colorRange, borderColorRange, strokeWidth);
+			addBehaviors(reincarnated);
+			reincarnated.setEnable(true);
+			
+			// HACK! to get shaderfactory on Drawable to reset color gradient for on resize
+			if (reincarnated.getShape() instanceof StarShape || reincarnated.getShape() instanceof HeartShape)
+			{
+				Rect bounds = reincarnated.getBounds();
+				Rect bounds2 = new Rect(bounds);
+				bounds2.bottom -= 1;
+				reincarnated.setBounds(bounds2);
+				bounds2.bottom += 1;
+				reincarnated.setBounds(bounds2);
+			}
+
+		}
+	}
+	
+	public boolean destroy() {
+		synchronized (this){
+			if (drawables.size() == 0)
+				return false;
+			List<StrokeAndFillDrawable> alive = new ArrayList<StrokeAndFillDrawable>();
+			for (StrokeAndFillDrawable drawable : drawables)
+				if (drawable.getShape() != null)
+					alive.add(drawable);
+
+			if (alive.size() == 0 || alive.size() < minAliveSize)
+				return false;
+			//randomly destroy
+			Random random = new Random();
+			int index = random.nextInt(alive.size());
+			StrokeAndFillDrawable aliveDrawable = alive.get(index);
+			aliveDrawable.slowDeath(this.alphaDecay);
+
+			return alive.size() < minAliveSize;
+		}
+
+	}
+
+	public void setGridAlivePercent(int percent) {
+		minAliveSize = (int) ((float)drawables.size() *((float)percent)/100.0f);
 	}
 
 }

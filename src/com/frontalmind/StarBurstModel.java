@@ -14,19 +14,20 @@ import android.graphics.RectF;
 import android.os.Handler;
 import android.os.Message;
 
+import com.frontalmind.shape.HeartShape;
 import com.frontalmind.shape.ShapeFactory;
-import com.frontalmind.shape.StrokeAndFillDrawable;
+import com.frontalmind.shape.StarShape;
 import com.frontalmind.shape.behavior.AlphaBehavior;
 import com.frontalmind.shape.behavior.MoveBehavior;
 import com.frontalmind.shape.behavior.RotateBehavior;
+import com.frontalmind.shape.behavior.ScaleBehavior;
 
 public class StarBurstModel {
 	private Random random;
-	private int  spinRate, moveRate, viewWidth, viewHeight;
+	private int  viewWidth, viewHeight;
 	private Timer createTimer;
 	private Timer moveTimer;
 	private boolean toggleAnimate = true;
-	String shape = "star";
 	Paint paint = new Paint();
 	RectF rect = new RectF();
 	List<StrokeAndFillDrawable> drawables;
@@ -34,22 +35,13 @@ public class StarBurstModel {
 	private String shapeStr = "star";
 	private String colorRange = "All";
 	private String borderColorRange = "All";
-	private int fillAlpha = 0;
-	private int strokeAlpha = 255;
-	private int strokeWidth = 2;
-	private int threshold = 0;
-	private int decay = 4;
 	private int maxNumber;
 	private IViewUpdate starBurstView;
 	
 	public StarBurstModel(IViewUpdate viewUpdate){
 		this.starBurstView = viewUpdate;
-		decay = 8;
-		threshold = 0;
 		maxNumber = 100;
 		paint.setStyle(Style.FILL_AND_STROKE);
-		spinRate = 1;
-		moveRate = 1;
 		
 		random = new Random();
 		drawables = new LinkedList<StrokeAndFillDrawable>();
@@ -72,12 +64,12 @@ public class StarBurstModel {
 		}
 		if (enable) {
 			moveTimer  = new Timer();
-			moveTimer.scheduleAtFixedRate(new MoveTask(), 0, 100);
+			moveTimer.scheduleAtFixedRate(new AnimateTask(), 0, 50);
 		}
 	}
 
 
-	class MoveTask extends TimerTask {
+	class AnimateTask extends TimerTask {
 		private Handler updateUI = new Handler() {
 			@Override
 			public void dispatchMessage(Message msg) {
@@ -112,30 +104,30 @@ public class StarBurstModel {
 				if (StarBurstModel.this.viewWidth == 0)
 					return;
 
-				if (drawables.size() < maxNumber) {
+				while (drawables.size() < maxNumber) {
 
 					int left = random.nextInt(StarBurstModel.this.viewWidth);
 					int top = random.nextInt(StarBurstModel.this.viewHeight);
 					int width = random
-							.nextInt(StarBurstModel.this.viewWidth / 4);
-					int height = random
-							.nextInt(StarBurstModel.this.viewHeight / 4);
-					if (width < 10)
-						width = 10;
-					if (height < 10)
-						height = 10;
+							.nextInt(StarBurstModel.this.viewWidth / 3);
+					if (width < 50)
+						width = 50;
 
 					int right = left + width;
-					int bottom = top + height;
+					int bottom = top + width;
 
-					StrokeAndFillDrawable shape = ShapeFactory
-							.generateDrawable(StarBurstModel.this.shapeStr,
-									StarBurstModel.this.colorRange,
-									StarBurstModel.this.borderColorRange,
-									0);
+					StrokeAndFillDrawable shape = new StrokeAndFillDrawable();
+					ShapeFactory.initializeDrawable(shape, StarBurstModel.this.shapeStr, colorRange, borderColorRange, 0);
+
 					shape.addBehavior(new AlphaBehavior(5, 255, 255, 0, false, false));
-					shape.addBehavior(new MoveBehavior(5,5, true));
-					shape.addBehavior(new RotateBehavior(10, true));
+					shape.addBehavior(new MoveBehavior(4,4, true));
+					if (shape.getShape() instanceof HeartShape){
+						shape.addBehavior(new ScaleBehavior(.85f, 1.15f, .05f, true, true));
+					} else {
+						shape.addBehavior(new RotateBehavior(1, true));
+						shape.scale =.1f;
+						shape.addBehavior(new ScaleBehavior(.1f, 1.0f, .01f, false, false));
+					}
 					shape.setBounds(left, top, right, bottom);
 					drawables.add(shape);
 				}
@@ -179,31 +171,32 @@ public class StarBurstModel {
 	public void draw(Canvas canvas) {
 		for (int i = 0; i < drawables.size(); ++i) {
 			StrokeAndFillDrawable drawable = drawables.get(i);
-			if (drawable.rotation != 0){
+			if (drawable.rotation != 0 || drawable.scale != 1.0f){
 				canvas.save();
-				canvas.rotate(drawable.rotation, drawable.getBounds().exactCenterX(), drawable.getBounds().exactCenterY());
+				canvas.translate(drawable.getBounds().exactCenterX(), drawable.getBounds().exactCenterY());
+				if (drawable.rotation != 0)
+					canvas.rotate(drawable.rotation);
+				if (drawable.scale != 1.0f)
+					canvas.scale(drawable.scale, drawable.scale);
+				canvas.translate(-drawable.getBounds().exactCenterX(), -drawable.getBounds().exactCenterY());
 				drawable.draw(canvas);
 				canvas.restore();
-			} else {
-				drawable.draw(canvas);
-				
 			}
+			else
+				drawable.draw(canvas);
 		}
 	}
 
-	public void setColorRange(String colorRange) {
-		this.colorRange = colorRange;
-	}
-
 	public void setShape(String shape) {
-		this.shape = shape;
+		this.shapeStr = shape;
 	}
-
 
 	public void setStarColor(String starColor) {
 		colorRange = starColor;
 		for (StrokeAndFillDrawable drawable : drawables) {
 			drawable.colorRange = starColor;
+			if (drawable.getShape() instanceof StarShape)
+				drawable.updateShader();
 		}
 	}
 
@@ -211,21 +204,5 @@ public class StarBurstModel {
 	public void setStarNumber(int starNumber) {
 		maxNumber = starNumber;
 	}
-
-
-	public void setSpinRate(int spinRate) {
-		this.spinRate = spinRate;
-		for (StrokeAndFillDrawable drawable : drawables) {
-		//	drawable.setRotationIncMax(spinRate);
-		}
-	}
-
-	public void setMoveRate(int moveRate) {
-		this.moveRate = moveRate;
-
-		for (StrokeAndFillDrawable drawable : drawables) {
-		//	drawable.setMoveIncMax(moveRate);
-		}
-	};
 
 }

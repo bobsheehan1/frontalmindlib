@@ -1,18 +1,19 @@
-package com.frontalmind.shape;
+package com.frontalmind;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RadialGradient;
 import android.graphics.Rect;
+import android.graphics.Shader;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.Shape;
 
+import com.frontalmind.shape.behavior.DeathBehavior;
 import com.frontalmind.shape.behavior.IBehavior;
 
 public class StrokeAndFillDrawable extends ShapeDrawable {
@@ -25,43 +26,54 @@ public class StrokeAndFillDrawable extends ShapeDrawable {
 	private boolean enableStroke;
 	private boolean enable;
 	private boolean locked = false;
-	
-	float shaderCx = 0;
-	float shaderCy = 0;
-	float shaderRadius = 100;
-	
-	RadialGradient radialGradientShader;
-	int centerColor, edgeColor;
-	
-	private BlurMaskFilter blurMaskFilter;
+
 	
 	public String borderColorRange;
 	public String colorRange;
 	public int rotation;
-	protected float radialRadius;
+	//protected float radialRadius;
 	protected RadialGradient radialGradient;
 	List<IBehavior> behaviors;
+	public float scale = 1.0f;
+	public boolean dieing;
 	
 	static private Random random = new Random();
 
 	public StrokeAndFillDrawable() {
 		super();
+		dieing = false;
 		fillpaint = this.getPaint();
 		fillpaint.setStyle(Paint.Style.FILL);
 		strokePaint = new Paint();
 		strokePaint.setStyle(Paint.Style.STROKE);
 
 		enableStroke = true;
-		enable = true;
+		enable = false;
 		colorRange = "All";
-		borderColorRange = "All";
-		
-		behaviors = new ArrayList<IBehavior>();
-		
+		borderColorRange = "All";	
+		behaviors = new ArrayList<IBehavior>();	
 	}
 	
 	public void addBehavior(IBehavior behavior){
-		this.behaviors.add(behavior);
+		synchronized(this){
+			this.behaviors.add(behavior);
+		}
+	}
+	
+	public void resetShape() {
+		synchronized(this){
+			setShape(null);
+			ShapeDrawable.ShaderFactory sf = new ShapeDrawable.ShaderFactory() {
+			    @Override
+			    public Shader resize(int width, int height) {
+			    	return null;
+			    }
+			};
+	
+			setShaderFactory(sf);
+			radialGradient = null;
+			
+		}
 	}
 
 	public StrokeAndFillDrawable(Shape s) {
@@ -72,9 +84,11 @@ public class StrokeAndFillDrawable extends ShapeDrawable {
 		strokePaint.setStyle(Paint.Style.STROKE);
 
 		enableStroke = true;
-		enable = true;
+		enable = false;
 		colorRange = "All";
 		borderColorRange = "All";
+		
+		dieing = false;
 
 	}
 	
@@ -301,82 +315,59 @@ public class StrokeAndFillDrawable extends ShapeDrawable {
 		// int valG = threshold + random.nextInt(256-threshold);
 		// int valB = threshold + random.nextInt(256-threshold);
 		//
-		int valR = random.nextInt(256);
-		int valG = random.nextInt(256);
-		int valB = random.nextInt(256);
-
+		int valWhiteBalance = random.nextInt(128);
+		int val1 = random.nextInt(256);
+		int val2 = random.nextInt(256);
+		int val3 = random.nextInt(256);
+		
+		final int bias = 128;
 		int c = Color.WHITE;
-		if (colorStr.equals("All"))
-			c = Color.argb(valA, valR, valG, valB);
-		else if (colorStr.equals("Red")) {
-			if (valR < 100)
-				valR += 100;
-			c = Color.argb(valA, valR, 0, 0);
+		if (colorStr.equals("All")){
+			while (val1 < bias && val2 < bias && val3 < 128){
+				val1 = random.nextInt(256);
+				val2 = random.nextInt(256);
+				val3 = random.nextInt(256);		
+			}
+			c = Color.argb(valA, val1, val2, val3);
+		}else if (colorStr.equals("Red")) {
+			c = Color.argb(valA, 255, valWhiteBalance, valWhiteBalance);
 		} else if (colorStr.equals("Green")) {
-			if (valG < 100)
-				valG += 100;
-			c = Color.argb(valA, 0, valG, 0);
+			c = Color.argb(valA, valWhiteBalance, 255, valWhiteBalance);
 		} else if (colorStr.equals("Blue")) {
-			if (valB < 100)
-				valB += 100;
-			c = Color.argb(valA, 0, 0, valB);
+			c = Color.argb(valA, valWhiteBalance, valWhiteBalance, 255);
 		} else if (colorStr.equals("Cyan")) {
-			if (valB < 100 && valG < 100) {
-				valB += 100;
-				valG += 100;
+			while (val1 < bias && val2 < bias){
+				val1 = random.nextInt(256);
+				val2 = random.nextInt(256);
 			}
-			c = Color.argb(valA, 0, valG, valB);
+			c = Color.argb(valA, 0, val1, val2);
 		} else if (colorStr.equals("Yellow")) {
-			if (valR < 100 && valG < 100) {
-				valR += 100;
-				valG += 100;
+			while (val1 < bias && val2 < bias){
+				val1 = random.nextInt(256);
+				val2 = random.nextInt(256);
 			}
-			c = Color.argb(valA, valR, valG, 0);
+			c = Color.argb(valA, val1, val2, 0);
 		} else if (colorStr.equals("Magenta")) {
-			if (valR < 100 && valB < 100) {
-				valR += 100;
-				valB += 100;
+			while (val1 < bias && val2 < bias){
+				val1 = random.nextInt(256);
+				val2 = random.nextInt(256);
 			}
-			c = Color.argb(valA, valR, 0, valB);
-		} else if (colorStr.equals("Gray")) {
-			if (valR < 100) {
-				valR += 100;
-			}			
-			c = Color.argb(valA, valR, valR, valR);
+			c = Color.argb(valA, val1, 0, val2);
+		} else if (colorStr.equals("Gray")) {		
+			while (val1 < bias && val2 < bias){
+				val1 = random.nextInt(256);
+			}
+			c = Color.argb(valA, val1, val1, val1);
 		}
 		return c;
 	}
 	
 	public void animate() {
+		synchronized(this){
 		for (IBehavior behavior : behaviors)
 			behavior.animate(this);	
+		}
 	}
-
-	public void setRadialGradientShaderColor(int centerColor, int edgeColor) {
-		this.centerColor = centerColor;
-		this.edgeColor = edgeColor;
-		//if (reverseGradient){
-		//	this.centerColor = edgeColor;
-		//	this.edgeColor = centerColor;
-		//}
-//		if (this.radialGradientShader != null)
-//			this.radialGradientShader = new RadialGradient(
-//				center.x, center.y, (float)this.innerRadius,
-//				this.centerColor, this.edgeColor,
-//			    Shader.TileMode.CLAMP);
-
-	}
-
-//	public void getRadialGradientShaderColors(int []colors) {
-//		if (reverseGradient){
-//			colors[1] = this.centerColor;
-//			colors[0] = this.edgeColor;
-//		} else {
-//			colors[0] = this.centerColor;
-//			colors[1] = this.edgeColor;
-//		}
-//		
-//	}
 
 	public int getRotation() {
 		return rotation;
@@ -403,5 +394,54 @@ public class StrokeAndFillDrawable extends ShapeDrawable {
 //		} 
 	}
 
-	
+	public void clearBehaviors() {
+		synchronized(this){
+			//rotation= 0;
+			//scale = 1.0f;
+			this.behaviors.clear();
+		}
+	}
+
+	public void updateShader() {
+		//final int centerColor = generateColor(true, 255);
+		//final int edgeColor = generateColor(true, 255);
+		
+		ShapeDrawable.ShaderFactory sf = new ShapeDrawable.ShaderFactory() {
+		    @Override
+		    public Shader resize(int width, int height) {
+		    	if (width == 0)
+		    		return null;
+		    	
+		    	createGradient(width, height);
+		    	//drawable.radialRadius = ((width/2) * (float)innerRadius/(float)outerRadius);
+				return radialGradient;
+		    }
+
+			private void createGradient(int width, int height) {
+				
+				int radius = width/2;
+				final int numberColors = random.nextInt(8) + 2;
+				int[] colors = new int[numberColors];
+				for (int i = 0; i < numberColors; ++i){
+					colors[i] = generateColor(true, 255);
+				}
+				
+				radialGradient = new RadialGradient(
+						(int) (width/2), 
+						(int) (height/2), 
+						radius,
+						colors, 
+						null,
+					    Shader.TileMode.CLAMP);
+			
+			}
+		};			
+		setShaderFactory(sf);
+	}
+
+	public void slowDeath(int decay) {
+		this.dieing = true;
+		clearBehaviors();
+		addBehavior(new DeathBehavior(decay));
+	}
 }

@@ -2,7 +2,7 @@ package com.frontalmind.shape.behavior;
 
 import java.util.Random;
 
-import com.frontalmind.shape.StrokeAndFillDrawable;
+import com.frontalmind.StrokeAndFillDrawable;
 
 public class AlphaBehavior implements IBehavior {
 
@@ -11,12 +11,12 @@ public class AlphaBehavior implements IBehavior {
 	private int fillAlphaMax, strokeAlphaMax, minAlpha;
 	private boolean enableToggle;
 	
-	public AlphaBehavior(int alphaIncIn, int fillAlphaMin, int strokeAlphaMin, int minAlpha, boolean enableRandom, boolean enableToggle)
+	public AlphaBehavior(int alphaIncIn, int fillAlphaMax, int strokeAlphaMax, int minAlpha, boolean enableRandom, boolean enableToggle)
 	{
 		this.enableToggle = enableToggle;
 		this.minAlpha = minAlpha;
-		this.fillAlphaMax = fillAlphaMin;
-		this.strokeAlphaMax = strokeAlphaMin;
+		this.fillAlphaMax = fillAlphaMax;
+		this.strokeAlphaMax = strokeAlphaMax;
 		if (!enableRandom){
 			this.alphaInc = alphaIncIn;
 			this.strokeAlphaInc = alphaIncIn;

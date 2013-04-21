@@ -2,7 +2,7 @@ package com.frontalmind.shape.behavior;
 
 import java.util.Random;
 
-import com.frontalmind.shape.StrokeAndFillDrawable;
+import com.frontalmind.StrokeAndFillDrawable;
 
 public class RotateBehavior implements IBehavior {
 

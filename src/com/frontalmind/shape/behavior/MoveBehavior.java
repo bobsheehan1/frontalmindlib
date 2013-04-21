@@ -4,7 +4,7 @@ import java.util.Random;
 
 import android.graphics.Rect;
 
-import com.frontalmind.shape.StrokeAndFillDrawable;
+import com.frontalmind.StrokeAndFillDrawable;
 
 
 public class MoveBehavior implements IBehavior {
