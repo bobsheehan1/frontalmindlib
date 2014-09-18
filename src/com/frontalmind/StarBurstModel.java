@@ -169,6 +169,7 @@ public class StarBurstModel {
 	}
 
 	public void draw(Canvas canvas) {
+		
 		for (int i = 0; i < drawables.size(); ++i) {
 			StrokeAndFillDrawable drawable = drawables.get(i);
 			if (drawable.rotation != 0 || drawable.scale != 1.0f){
